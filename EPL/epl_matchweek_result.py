@@ -1,12 +1,58 @@
+""" 
+from the Premier League website and processes the data into a structured format.
+This script fetches and processes match statistics for a specified Premier League match week
+and writes the data to a CSV file. It utilizes web scraping techniques to extract match data
+
+Modules:
+- argparse: For parsing command-line arguments.
+- csv: For writing match statistics to a CSV file.
+- urllib.request: For sending HTTP requests and handling responses.
+- bs4(BeautifulSoup): For parsing HTML content.
+- fake_useragent: For generating random user agents for HTTP requests.
+
+Classes:
+- MatchStatistic: A class (imported from EPL.epl_match_result) used to process and store
+    match statistics.
+
+Functions:
+- manipulate_stats(data: MatchStatistic, ref: str): Processes match statistics data and
+    extracts relevant information into a list format.
+- main(match_week: int): Fetches match statistics for a given match week, processes the
+    data, and writes it to a CSV file.
+
+Command-line Arguments:
+- -mw, --match_week: Specifies the match week number for which statistics are to be fetched.
+
+CSV Output:
+- The script generates a CSV file named `match_stats_ < match_week > .csv` in the `crawling/data/`
+    directory. The CSV contains the following fields:
+    - Season, Date, HomeTeam, AwayTeam, FTHG, FTAG, HTHG, HTAG, Referee, HS, AS, HST, AST, HC,
+        AC, HF, AF, HY, AY, HR, AR.
+
+- The script requires the `fake_useragent` and `bs4` libraries to be installed.
+- It assumes the existence of the `MatchStatistic` class and its `get_stats` method for
+    processing match data.
+
+Usage:
+- Run the script from the command line and provide the match week number as an argument:
+    `python epl_matchweek_result.py - mw < match_week_number >`
+
+Notes:
+- The script uses BeautifulSoup to parse HTML content and extract match fixtures and referee
+    information.
+- It sends HTTP requests to the Premier League website and an API endpoint to fetch match
+    data.
+- The match week number is adjusted by adding 18389 to align with the Premier League's
+    internal match week numbering system."""
+
 import argparse
 import csv
 import json
 from urllib.request import Request, urlopen
 
 from bs4 import BeautifulSoup
+from epl_match_result import MatchStatistic
 from fake_useragent import UserAgent
-
-from EPL.epl_match_result import MatchStatistic
 
 # Initialize User Agent
 ua = UserAgent()
@@ -22,6 +68,10 @@ args = parser.parse_args()
 
 
 def manipulate_stats(data: MatchStatistic, ref: str):
+    """Manipulates the match statistics data to extract relevant information.
+    Args:
+        data(MatchStatistic): An instance of MatchStatistic containing match data.
+        ref(str): The referee's name."""
     return [
         data.match.season,
         data.match.kickoff,
@@ -48,6 +98,43 @@ def manipulate_stats(data: MatchStatistic, ref: str):
 
 
 def main(match_week):
+    """
+    Fetches and processes match statistics for a given Premier League match week.
+
+    This function retrieves match statistics from the Premier League website for a
+    specified match week and writes the data to a CSV file. It uses BeautifulSoup to
+    parse HTML content and extract relevant data, and urllib to handle HTTP requests
+    and responses. Additionally, it employs fake_useragent to generate random user
+    agents for the requests.
+
+    Args:
+        match_week(int): The match week number for which statistics are to be fetched.
+
+    Functionality:
+    - Constructs the URL for the specified match week and fetches the match fixtures.
+    - Extracts match IDs from the fixtures and iterates through each match to fetch
+      detailed statistics.
+    - Retrieves various match statistics such as season, date, teams, goals, referee,
+      shots, cards, etc.
+    - Writes the extracted statistics to a CSV file named `match_stats_ < match_week > .csv`
+      in the `crawling/data /` directory.
+
+    CSV File Fields:
+    - Season, Date, HomeTeam, AwayTeam, FTHG, FTAG, HTHG, HTAG, Referee, HS, AS, HST,
+      AST, HC, AC, HF, AF, HY, AY, HR, AR.
+
+    Dependencies:
+    - urllib: For sending HTTP requests and handling responses.
+    - BeautifulSoup: For parsing HTML content.
+    - fake_useragent: For generating random user agents.
+    - json: For processing JSON responses.
+
+    Note:
+    - The function assumes the existence of helper functions `MatchStatistic.get_stats`
+      and `manipulate_stats` to process and format the match statistics.
+    - The function is intended to be called from the main block with the match week as
+      an argument.
+    """
     match_week_req = Request(
         f"https://www.premierleague.com/matchweek/{match_week}/blog?match=true"
     )
@@ -60,7 +147,7 @@ def main(match_week):
             ).select("a.match-fixture--abridged")
         )
 
-        filename = f"crawling/data/match_stats_{match_week}.csv"
+        filename = f"EPL/data/match_stats_{match_week}.csv"
         fields = [
             "Season",
             "Date",
@@ -101,7 +188,7 @@ def main(match_week):
                         t.text.strip()
                         for t in BeautifulSoup(
                             uo.read().decode("utf8"), "html.parser"
-                        ).findAll(class_="mc-summary__info")
+                        ).find_all(class_="mc-summary__info")
                     )[-1].split(": ")[-1]
 
                     match_stat_req = Request(
